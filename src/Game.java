@@ -34,7 +34,7 @@ public class Game extends JFrame implements ControllerListener {
     */
     public Game(long FPS) {
         //dados do frame (window)
-        this.setTitle("Game...");
+        this.setTitle("Star Field Spectra");
         this.setSize(windowWidth, windowHeight);
         this.setPreferredSize(new Dimension(windowWidth, windowHeight));
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
