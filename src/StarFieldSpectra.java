@@ -7,12 +7,14 @@ import java.awt.event.KeyEvent;
 import java.awt.image.VolatileImage;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import Interfaces.Game;
+
 import java.awt.event.KeyAdapter;
 
 /* 
     Classe responsável pelo jogo
 */
-public class Game extends JFrame implements ControllerListener {
+public class StarFieldSpectra extends JFrame implements ControllerListener, Game {
 
     private static final long serialVersionUID  = 297111147922924467L;
     private int windowWidth                     = 1280 + 16;
@@ -32,7 +34,7 @@ public class Game extends JFrame implements ControllerListener {
     /* 
         Construtor
     */
-    public Game(long FPS) {
+    public StarFieldSpectra(long FPS) {
         //dados do frame (window)
         this.setTitle("Star Field Spectra");
         this.setSize(windowWidth, windowHeight);
@@ -122,7 +124,7 @@ public class Game extends JFrame implements ControllerListener {
     /* 
         Atualiza o game
     */
-    public boolean update(long timeStamp) {
+    public void update(long timeStamp) {
 
         //Atualiza o background
         this.background.update(timeStamp);
@@ -140,9 +142,6 @@ public class Game extends JFrame implements ControllerListener {
         }
 
         this.star.update();
-       
-        //TODO:
-        return (true);
     }
 
     /* 

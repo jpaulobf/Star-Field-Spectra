@@ -1,4 +1,7 @@
 /* Classe game-engine */
+
+import Interfaces.Game;
+
 public class GameEngine implements Runnable {
 
     private boolean isEngineRunning     = true;
@@ -25,7 +28,7 @@ public class GameEngine implements Runnable {
 
     /* Método de execução da thread */
     public void run() {
-        this.game = new Game(FPS);
+        this.game = new StarFieldSpectra(FPS);
         long timeStamp = System.nanoTime();
         long tempPeriod = 0;
         int accumulator = 0;
