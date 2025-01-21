@@ -1,6 +1,8 @@
+package engine;
 /* Classe game-engine */
 
-import Interfaces.Game;
+import game.StarFieldSpectra;
+import interfaces.Game;
 
 public class GameEngine implements Runnable {
 

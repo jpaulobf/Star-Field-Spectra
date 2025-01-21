@@ -1,8 +1,10 @@
+package game;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.Arc2D;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
+
 import java.io.File;
 import java.io.IOException;
 

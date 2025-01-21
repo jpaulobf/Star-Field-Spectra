@@ -1,3 +1,4 @@
+package game;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
@@ -7,8 +8,11 @@ import java.awt.event.KeyEvent;
 import java.awt.image.VolatileImage;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import Interfaces.Game;
-
+import engine.GameEngine;
+import interfaces.Game;
+import interfaces.TController;
+import listener.ControllerListener;
+import audio.Audio;
 import java.awt.event.KeyAdapter;
 
 /* 
