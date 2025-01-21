@@ -1,9 +1,9 @@
 package engine;
-/* Classe game-engine */
 
 import game.StarFieldSpectra;
 import interfaces.Game;
 
+/* Classe game-engine */
 public class GameEngine implements Runnable {
 
     private boolean isEngineRunning     = true;
