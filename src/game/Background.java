@@ -65,9 +65,11 @@ public class Background {
     /* 
         Atualiza  o background
     */
-    public void update(long timeStamp) {
+    public void update(long frametime) {
         
-        this.bgPosX -= .25;
+        double velocity = 0.25 * frametime / 16666666;
+
+        this.bgPosX -= velocity;
 
         if (this.bgPosX <= -(columnWidth)) {
             

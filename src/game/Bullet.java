@@ -21,17 +21,19 @@ public class Bullet extends Sprite {
                   boolean isMeShooting, 
                   Graphics2D g2d) {
         super(panelWidth, panelHeight, g2d);
-        this.angle                      = (short)(angle - 90);
+        this.angle                      = (short)(angle - 45);
         this.positionX                  = positionX;
         this.positionY                  = positionY;
         this.isMeShooting               = isMeShooting;
         this.spriteWidth                = 10;
         this.spriteHeight               = 4;
-        this.speed                      = 6;
+        this.defaultSpeed               = 8;
+        this.speed                      = 0;
         this.halfSpriteWidth            = (short)(this.spriteWidth / 2);
         this.halfSpriteHeight           = (short)(this.spriteHeight / 2);
         this.direction                  = this.isMeShooting?ME:ENEMY;
-        this.destructionAnimationStep   = 2;
+        this.defaultDestructionAnimationStep = 2;
+        this.destructionAnimationStep = this.defaultDestructionAnimationStep;
     }
 
     /* Verifica se a bala se destruiu (saiu da tela ou atingiu um inimigo ou elemento do cenário [foreground]) */
@@ -47,9 +49,8 @@ public class Bullet extends Sprite {
 
     /* Desenha o bullet */
     public void draw() {
-        
         this.g2d.setColor(Color.red);
-
+        
         if (!this.isDestroyed) {
             if (this.angle != 0) {
                 short tX = (short)(this.positionX + this.halfSpriteWidth);
@@ -61,6 +62,7 @@ public class Bullet extends Sprite {
                 //rotate
                 this.g2d.rotate(Math.toRadians(this.angle));
 
+                //draw the bullets
                 this.g2d.drawRect(0, 0, this.spriteWidth, this.spriteHeight);
             
                 //undo rotate
@@ -69,7 +71,7 @@ public class Bullet extends Sprite {
                 //undo translate
                 this.g2d.translate(-tX, -tY);
             } else {
-                this.g2d.drawRect(this.positionX, this.positionY, this.spriteWidth, this.spriteHeight);
+                this.g2d.drawRect((int)this.positionX, (int)this.positionY, this.spriteWidth, this.spriteHeight);
             }
         } else {
             if (!this.destroyedAnimationDone) {
@@ -79,21 +81,21 @@ public class Bullet extends Sprite {
     }
 
     /* Atualiza */
-    public void update(long timeStamp, Sprite sprite) {
+    public void update(long frametime, Sprite sprite) {
+        this.speed = (short)(this.defaultSpeed * (double)(frametime / 16_666_666D));
         if (!this.isDestroyed) {
-            if (this.angle == 0) {
-                this.positionX += (speed * direction);
-            } else if (this.angle != 0 && this.angle <= 180) {
-                this.positionX += (speed * Math.cos(Math.toRadians(this.angle)) * direction);
-                this.positionY += (speed * Math.sin(Math.toRadians(this.angle)) * direction);
-            } else {
-                //TODO: Tiros para trás
+            this.positionX += (speed * direction);    
+            if (this.angle < 0) {
+                this.positionY -= (this.speed * 0.25);
+            } else if (this.angle > 0) {
+                this.positionY += (this.speed * 0.25);
             }
         } else {
             if (this.isToAnimateDestruction && !this.destroyedAnimationDone) {
+                this.destructionAnimationStep = this.defaultDestructionAnimationStep * ((double) frametime / 16_666_666D);
                 this.destroyAnimationWidth  += this.destructionAnimationStep;
                 this.destroyAnimationHeight += this.destructionAnimationStep;
-                if (this.destroyAnimationWidth == 20) {
+                if (this.destroyAnimationWidth >= 20) {
                     this.destroyedAnimationDone = true;
                 }
             }
@@ -103,10 +105,10 @@ public class Bullet extends Sprite {
     /* desenha a animação de destruição */
     protected void drawDestroyAnimation() {
         this.g2d.setColor(Color.red);
-        this.g2d.drawOval(this.destroyAnimationX + this.halfSpriteWidth, 
-                          this.destroyAnimationY + this.halfSpriteHeight, 
-                          this.destroyAnimationWidth, 
-                          this.destroyAnimationHeight);
+        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth, 
+                          (int)this.destroyAnimationY + this.halfSpriteHeight, 
+                          (int)this.destroyAnimationWidth, 
+                          (int)this.destroyAnimationHeight);
         this.destroyAnimationX -= destructionAnimationStep / 2;
         this.destroyAnimationY -= destructionAnimationStep / 2;
     }

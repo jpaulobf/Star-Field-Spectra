@@ -26,7 +26,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     private int windowHeight                    = 480 + 14;
     private JPanel panel                        = null;
     private GraphicsEnvironment ge              = null;
-    private GraphicsDevice dsd                   = null;
+    private GraphicsDevice dsd                  = null;
     private Graphics2D g2d                      = null;
     private VolatileImage bufferImage           = null;
     private Spaceship spaceship                 = null;
@@ -75,11 +75,11 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         this.star           = new Star(g2d, 100, 100, 5, 5, 0);
 
         //thread para o controle (quando presente)
-        this.tcontroller    = new TController(FPS, this);
-        Thread thread       = new Thread(tcontroller, "controller");
-        if (thread != null && tcontroller.hasAnyConnectedController()) {
-            thread.start();
-        }
+        //this.tcontroller    = new TController(FPS, this);
+        //Thread thread       = new Thread(tcontroller, "controller");
+        //if (thread != null && tcontroller.hasAnyConnectedController() && false) {
+        //   thread.start();
+        //}
 
         //variável para música de background
         this.backgroundMusic = new Audio("audio/1.snd");
@@ -92,8 +92,8 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
             /* Key pressed */
             public void keyPressed(KeyEvent e) {
                 if (tcontroller == null || !tcontroller.hasAnyConnectedController()) {
-                    if (e.getKeyCode() == 39) spaceship.L = true;
-                    if (e.getKeyCode() == 37) spaceship.R = true;
+                    if (e.getKeyCode() == 37) spaceship.L = true;
+                    if (e.getKeyCode() == 39) spaceship.R = true;
                     if (e.getKeyCode() == 38) spaceship.U = true;
                     if (e.getKeyCode() == 40) spaceship.D = true;
                     if (e.getKeyCode() == 32) spaceship.S = true;
@@ -103,8 +103,8 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
             /* Key released */
             public void keyReleased(KeyEvent e) {
                 if (tcontroller == null || !tcontroller.hasAnyConnectedController()) {
-                    if (e.getKeyCode() == 39) spaceship.L = false;
-                    if (e.getKeyCode() == 37) spaceship.R = false;
+                    if (e.getKeyCode() == 37) spaceship.L = false;
+                    if (e.getKeyCode() == 39) spaceship.R = false;
                     if (e.getKeyCode() == 38) spaceship.U = false;
                     if (e.getKeyCode() == 40) spaceship.D = false;
                     if (e.getKeyCode() == 32) spaceship.S = false;
@@ -129,30 +129,32 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     /* 
         Atualiza o game
     */
-    public void update(long timeStamp) {
+    public void update(long frametime) {
+
+        //System.out.println("Frame time: " + frametime);
 
         //Atualiza o background
-        this.background.update(timeStamp);
+        this.background.update(frametime);
 
         //Atualiza a spaceship
-        this.spaceship.update(timeStamp, this.enemy);
+        this.spaceship.update(frametime, this.enemy);
 
         //Atualiza o inimigo
-        this.enemy.update(timeStamp, this.spaceship);
+        this.enemy.update(frametime, this.spaceship);
 
         //Verifica a colisão entre a nave e o inimigo
         if (Sprite.areColliding(this.spaceship, this.enemy)) {
-            this.enemy.hasCollided();
-            this.spaceship.hasCollided();
+            this.enemy.hasCollided(true);
+            this.spaceship.hasCollided(true);
         }
 
-        this.star.update();
+        this.star.update(frametime);
     }
 
     /* 
         Desenha o game
     */
-    public void draw() {
+    public void draw(long timeStamp) {
         //Limpa a janela
         g2d.setBackground(Color.black);
         g2d.clearRect(0, 0, windowWidth, windowHeight);
@@ -160,7 +162,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         //Desenha a spaceship
         this.background.draw();
         
-        //Desenha um inimigo
+        //Desenha uma estrela
         this.star.draw();
 
         //Desenha a spaceship
@@ -174,7 +176,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     }
 
     public static void main(String[] args) throws Exception {
-        Thread thread1 = new Thread(new GameEngine(), "engine");
+        Thread thread1 = new Thread(new GameEngine(240), "engine");
         thread1.start();
     }
 }

@@ -20,7 +20,8 @@ public class Spaceship extends Sprite {
     private long lastShot               = 0;
     protected Bullet[] bullets          = new Bullet[maxBullets];
     private byte numberOfBombs          = 5;
-    private byte bombSpeed              = 8;
+    private short bombSpeed             = 0;
+    private short defaultBombSpeed      = 12;
     private Arc2D bomb                  = null;
     public boolean L                    = false; //left
     public boolean R                    = false; //right
@@ -43,11 +44,12 @@ public class Spaceship extends Sprite {
         this.spriteWidth                = (short)spaceshipImg.getWidth();
         this.spriteHeight               = (short)spaceshipImg.getHeight();
         this.positionX                  = 10;
-        this.speed                      = 3;
+        this.defaultSpeed               = 3D;
         this.positionY                  = (short)((this.panelHeight / 2) - (this.spriteHeight / 2));
         this.halfSpriteWidth            = (short)(this.spriteWidth / 2);
         this.halfSpriteHeight           = (short)(this.spriteHeight / 2);
-        this.destructionAnimationStep   = 2;
+        this.defaultDestructionAnimationStep = 2;
+        this.destructionAnimationStep = this.defaultDestructionAnimationStep;
     }
 
     /* Desenha a nave e seus adendos */
@@ -80,27 +82,30 @@ public class Spaceship extends Sprite {
     protected void drawDestroyAnimation() {
         this.g2d.setColor(Color.red);
 
-        this.g2d.drawOval(this.destroyAnimationX + this.halfSpriteWidth, 
-                          this.destroyAnimationY + this.halfSpriteHeight, 
-                          this.destroyAnimationWidth, 
-                          this.destroyAnimationHeight);
+        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth, 
+                          (int)this.destroyAnimationY + this.halfSpriteHeight, 
+                          (int)this.destroyAnimationWidth, 
+                          (int)this.destroyAnimationHeight);
 
-        this.g2d.drawOval(this.destroyAnimationX + this.halfSpriteWidth + 8, 
-                          this.destroyAnimationY + this.halfSpriteHeight + 8, 
-                          this.destroyAnimationWidth - 16, 
-                          this.destroyAnimationHeight - 16);
+        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth + 8, 
+                          (int)this.destroyAnimationY + this.halfSpriteHeight + 8, 
+                          (int)this.destroyAnimationWidth - 16, 
+                          (int)this.destroyAnimationHeight - 16);
 
-        this.g2d.drawOval(this.destroyAnimationX + this.halfSpriteWidth + 16, 
-                          this.destroyAnimationY + this.halfSpriteHeight + 16, 
-                          this.destroyAnimationWidth - 32, 
-                          this.destroyAnimationHeight - 32);
+        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth + 16, 
+                          (int)this.destroyAnimationY + this.halfSpriteHeight + 16, 
+                          (int)this.destroyAnimationWidth - 32, 
+                          (int)this.destroyAnimationHeight - 32);
 
         this.destroyAnimationX -= destructionAnimationStep / 2;
         this.destroyAnimationY -= destructionAnimationStep / 2;
     }
 
     /* Atualiza a nave e seus adendos */
-    public void update(long timeStamp, Sprite enemy) {
+    public void update(long frametime, Sprite enemy) {
+
+        this.speed = this.defaultSpeed * (double)(frametime / 16666666D);
+
         if (!this.isDestroyed) {    
             if (!(this.L && this.R)) {
                 if (this.L) {
@@ -117,12 +122,16 @@ public class Spaceship extends Sprite {
                 }
             }
             if (this.S) {
-                this.shoot(timeStamp);
+                this.shoot(frametime);
+            }
+            if (!this.S) {
+                this.lastShot = 0;
             }
             if (this.B) {
-                this.boom(timeStamp);
+                this.boom(frametime);
             }
             if (this.bomb != null) {
+                bombSpeed = (short)(defaultBombSpeed * ((double)frametime / 16666666D));
                 this.bomb.setArc(this.bomb.getX() - bombSpeed / 2, 
                                  this.bomb.getY() - bombSpeed / 2, 
                                  this.bomb.getWidth() + bombSpeed, 
@@ -134,12 +143,13 @@ public class Spaceship extends Sprite {
                 } else {
                     if (Sprite.areCollidingBomb(this.bomb, enemy)) {
                         System.out.println("colidiu...");
-                        enemy.hasCollided();
+                        enemy.hasCollided(false);
                     }
                 }
             }
         } else {
             if (this.isToAnimateDestruction && !this.destroyedAnimationDone) {
+                this.destructionAnimationStep = this.defaultDestructionAnimationStep * ((double) frametime / 16_666_666D);
                 this.destroyAnimationWidth  += this.destructionAnimationStep;
                 this.destroyAnimationHeight += this.destructionAnimationStep;
                 if (this.destroyAnimationWidth >= this.spriteWidth) {
@@ -151,13 +161,13 @@ public class Spaceship extends Sprite {
         for (int count = 0; count < this.bullets.length; count++) {
             var bullet = this.bullets[count];
             if (bullet != null) {
-                bullet.update(timeStamp, enemy);
+                bullet.update(frametime, enemy);
                 if (bullet.bulletDestroyed()) {
                     bullet = null;
                     this.bullets[count] = null;
                 } else {
                     if (Sprite.areColliding(bullet, enemy)) {
-                        enemy.hasCollided();
+                        enemy.hasCollided(false);
                     }
                 }
             }
@@ -166,56 +176,59 @@ public class Spaceship extends Sprite {
 
     /* Move a nave para baixo */
     private void moveDown() {
-        short next = (short)(this.positionY + this.speed);
+        double next = (double)(this.positionY + this.speed);
         if (next > this.panelHeight - spriteHeight - 1) {
-            next = (short)(this.panelHeight - spriteHeight - 1);
+            next = (double)(this.panelHeight - spriteHeight - 1);
         }
-        this.positionY = next;
+        this.positionY = (short)Math.ceil(next);
     }
 
     /* Move a nave para cima */
     private void moveUp() {
-        short next = (short)(this.positionY - this.speed);
+        double next = (double)(this.positionY - this.speed);
         if (next < 0) {
             next = 0;
         }
-        this.positionY = next;
+        this.positionY = (short)Math.floor(next);
     }
 
     /* Move a nave para a direita */
     private void moveRight() {
-        short next = (short)(this.positionX - this.speed);
-        if (next < 0) {
-            next = 0;
+        double next = (double)(this.positionX + this.speed);
+        if (next > this.panelWidth - spriteWidth - 1) {
+            next = (double)(this.panelWidth - spriteWidth - 1);
         }
-        this.positionX = next;
+        this.positionX = (short)Math.ceil(next);
     }
 
     /* Move a nave para a esquerda */
     private void moveLeft() {
-        short next = (short)(this.positionX + this.speed);
-        if (next > this.panelWidth - spriteWidth - 1) {
-            next = (short)(this.panelWidth - spriteWidth - 1);
+        double next = (double)(this.positionX - this.speed);
+        if (next < 0) {
+            next = 0;
         }
-        this.positionX = next;
+        this.positionX = (short)Math.floor(next);
     }
 
     /* Atira com a nave */
-    private void shoot(long timeStamp) {
-        if ((timeStamp - this.lastShot) > 300_000_000) {
+    private void shoot(long frametime) {
+        if (this.lastShot == 0) {
             short x = (short)(this.positionX + this.spriteWidth + 2);
             short y = (short)(this.positionY + this.halfSpriteHeight);
-            bullets[currentBulletPos++%maxBullets] = new Bullet((short)90, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
-            bullets[currentBulletPos++%maxBullets] = new Bullet((short)70, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
-            bullets[currentBulletPos++%maxBullets] = new Bullet((short)110, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
-            this.lastShot = timeStamp;
+            bullets[currentBulletPos++%maxBullets] = new Bullet((short)45, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
+            bullets[currentBulletPos++%maxBullets] = new Bullet((short)30, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
+            bullets[currentBulletPos++%maxBullets] = new Bullet((short)65, x, y, this.panelWidth, this.panelHeight, true, this.g2d);
+        }
+        this.lastShot += frametime;
+        if (this.lastShot >= 512_000_000) {
+            this.lastShot = 0;
         }
     }
 
     /* Explode uma bomba */
-    private void boom(long timeStamp) {
+    private void boom(long frametime) {
         if (this.bomb == null && this.numberOfBombs > 0) {
-            this.bomb = new Arc2D.Double(this.positionX + this.halfSpriteWidth, 
+            this.bomb = new Arc2D.Double((this.positionX + this.halfSpriteWidth), 
                                          this.positionY + this.halfSpriteHeight, 
                                          2, 2, 0, 360, Arc2D.PIE);
             this.numberOfBombs--;

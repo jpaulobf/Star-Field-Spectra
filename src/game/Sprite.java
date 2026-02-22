@@ -10,8 +10,8 @@ import java.awt.Graphics2D;
 public abstract class Sprite {
 
     /* Membros */
-    protected short positionX                   = 0;
-    protected short positionY                   = 0;
+    protected double positionX                  = 0;
+    protected double positionY                  = 0;
     protected short spriteWidth                 = 0;
     protected short spriteHeight                = 0;
     protected short halfSpriteWidth             = 0;
@@ -19,17 +19,20 @@ public abstract class Sprite {
     protected short angle                       = 0;
     protected short panelWidth                  = 0;
     protected short panelHeight                 = 0;
-    protected short speed                       = 0;
+    protected double speed                      = 0;
+    protected double defaultSpeed               = 0;
+    protected double velocity                   = 1D;
     protected boolean isDestroyed               = false;
     protected Graphics2D g2d                    = null;
 
     protected boolean isToAnimateDestruction    = false;
     protected boolean destroyedAnimationDone    = false;
-    protected short destroyAnimationWidth       = 0;
-    protected short destroyAnimationHeight      = 0;
-    protected short destroyAnimationX           = 0;
-    protected short destroyAnimationY           = 0;
-    protected byte destructionAnimationStep     = 0;
+    protected double destroyAnimationWidth      = 0;
+    protected double destroyAnimationHeight     = 0;
+    protected double destroyAnimationX          = 0;
+    protected double destroyAnimationY          = 0;
+    protected double destructionAnimationStep   = 0;
+    protected double defaultDestructionAnimationStep = 2;
 
     /* Construtor */
     public Sprite(short panelWidth, short panelHeight, Graphics2D g2d) {
@@ -45,13 +48,15 @@ public abstract class Sprite {
     public int getPositionY()   {return ((int)this.positionY);}
 
     /* Set the collision */
-    public void hasCollided() {
+    public void hasCollided(boolean keepPosition) {
         this.isDestroyed            = true;
         this.destroyAnimationX      = this.positionX;
         this.destroyAnimationY      = this.positionY;
         this.isToAnimateDestruction = true;
-        this.positionX              = -2000;
-        this.positionY              = -2000;
+        if (!keepPosition) {
+            this.positionX              = -2000;
+            this.positionY              = -2000;
+        }
     }
 
     public abstract void draw();

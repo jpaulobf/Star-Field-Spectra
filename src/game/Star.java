@@ -32,11 +32,14 @@ public class Star {
     }
 
     /* Atualiza a estrela */
-    public void update() {
+    public void update(long frametime) {
+
+        double velocity = frametime / 16666666D;
+
         if (this.alpha + contrast > 130) {
-            contrast = -.5;
+            contrast = -.5 * velocity;
         } else if (this.alpha + contrast < 100) {
-            contrast = 2;
+            contrast = 2 * velocity;
         }
 
         this.alpha += contrast;
