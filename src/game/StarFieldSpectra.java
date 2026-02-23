@@ -2,6 +2,7 @@ package game;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -35,6 +36,14 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     private TController tcontroller             = null;
     private Audio backgroundMusic               = null;
     private Star star                           = null;
+    private boolean showFPS                     = true;
+    
+    //FPS calculation
+    private long[] fpsHistory                   = new long[20];
+    private int fpsIndex                        = 0;
+    private int fpsCount                        = 0;
+    private long fpsTotalTime                   = 0;
+    private Font fpsFont;
 
     /* 
         Construtor
@@ -45,6 +54,9 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         this.setSize(windowWidth, windowHeight);
         this.setPreferredSize(new Dimension(windowWidth, windowHeight));
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Pré-carrega a fonte para a renderização do FPS
+        this.fpsFont = new Font("Arial", Font.PLAIN, 12);
         
         //dados do panel
         this.panel = new JPanel();
@@ -154,7 +166,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     /* 
         Desenha o game
     */
-    public void draw(long timeStamp) {
+    public void draw(long frametime) {
         //Limpa a janela
         g2d.setBackground(Color.black);
         g2d.clearRect(0, 0, windowWidth, windowHeight);
@@ -171,12 +183,44 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         //Desenha um inimigo
         this.enemy.draw();
 
+        //render the fps counter
+        this.renderFPSLayer(frametime);
+
         //Copia o buffer para o panel
         this.panel.getGraphics().drawImage(this.bufferImage, 0, 0, this);
     }
 
+    /**
+     * Show FPS Layer
+     * @param frametime
+     */
+    private void renderFPSLayer(long frametime) {
+        //verify if the user want to show the FPS
+        if (this.showFPS) {
+            // Se o histórico estiver cheio, subtrai o valor mais antigo que será substituído.
+            if (this.fpsCount == this.fpsHistory.length) {
+                this.fpsTotalTime -= this.fpsHistory[this.fpsIndex];
+            }
+
+            // Adiciona o novo frametime ao total e atualiza o histórico.
+            this.fpsTotalTime += frametime;
+            this.fpsHistory[this.fpsIndex] = frametime;
+
+            this.fpsIndex = (this.fpsIndex + 1) % this.fpsHistory.length;
+            if (this.fpsCount < this.fpsHistory.length) {
+                this.fpsCount++;
+            }
+
+            double average = (this.fpsCount > 0) ? (double)this.fpsTotalTime / this.fpsCount : frametime;
+
+            this.g2d.setColor(Color.RED);
+            this.g2d.setFont(this.fpsFont);
+            this.g2d.drawString("fps: " + (int)(1_000_000_000D / average), windowWidth - 70, windowHeight - 50);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        Thread thread1 = new Thread(new GameEngine(240), "engine");
+        Thread thread1 = new Thread(new GameEngine(400), "engine");
         thread1.start();
     }
 }
