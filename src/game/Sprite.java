@@ -3,6 +3,7 @@ package game;
 import java.awt.Rectangle;
 import java.awt.geom.Arc2D;
 import java.awt.Graphics2D;
+import java.awt.Color;
 
 /* 
     Classe base para os sprites
@@ -33,6 +34,13 @@ public abstract class Sprite {
     protected double destroyAnimationY          = 0;
     protected double destructionAnimationStep   = 0;
     protected double defaultDestructionAnimationStep = 2;
+    private static final int DESTRUCTION_PARTICLE_COUNT = 22;
+    private final double[] particleX = new double[DESTRUCTION_PARTICLE_COUNT];
+    private final double[] particleY = new double[DESTRUCTION_PARTICLE_COUNT];
+    private final double[] particleVelocityX = new double[DESTRUCTION_PARTICLE_COUNT];
+    private final double[] particleVelocityY = new double[DESTRUCTION_PARTICLE_COUNT];
+    private final double[] particleSize = new double[DESTRUCTION_PARTICLE_COUNT];
+    private final int[] particleLife = new int[DESTRUCTION_PARTICLE_COUNT];
 
     /* Construtor */
     public Sprite(short panelWidth, short panelHeight, Graphics2D g2d) {
@@ -58,9 +66,52 @@ public abstract class Sprite {
         this.destroyAnimationWidth  = Math.max(4, this.spriteWidth / 4);
         this.destroyAnimationHeight = Math.max(4, this.spriteHeight / 4);
         this.isToAnimateDestruction = true;
+        this.createDestructionParticles();
         if (!keepPosition) {
             this.positionX              = -2000;
             this.positionY              = -2000;
+        }
+    }
+
+    private void createDestructionParticles() {
+        double centerX = this.destroyAnimationX + this.halfSpriteWidth;
+        double centerY = this.destroyAnimationY + this.halfSpriteHeight;
+        for (int count = 0; count < DESTRUCTION_PARTICLE_COUNT; count++) {
+            double angle = (Math.PI * 2D * count) / DESTRUCTION_PARTICLE_COUNT;
+            double speed = 0.8D + (count % 5) * 0.35D;
+            this.particleX[count] = centerX;
+            this.particleY[count] = centerY;
+            this.particleVelocityX[count] = Math.cos(angle) * speed;
+            this.particleVelocityY[count] = Math.sin(angle) * speed;
+            this.particleSize[count] = 2D + (count % 3);
+            this.particleLife[count] = 24 + (count % 8);
+        }
+    }
+
+    protected void drawDestructionParticles() {
+        boolean particlesAlive = false;
+        double frameScale = this.destructionAnimationStep / this.defaultDestructionAnimationStep;
+        if (frameScale <= 0) {
+            frameScale = 1D;
+        }
+
+        for (int count = 0; count < DESTRUCTION_PARTICLE_COUNT; count++) {
+            if (this.particleLife[count] <= 0) {
+                continue;
+            }
+            particlesAlive = true;
+            int alpha = Math.min(255, this.particleLife[count] * 10);
+            this.g2d.setColor(new Color(255, count % 3 == 0 ? 220 : 100, 35, alpha));
+            this.g2d.fillOval((int)this.particleX[count], (int)this.particleY[count],
+                    (int)this.particleSize[count], (int)this.particleSize[count]);
+            this.particleX[count] += this.particleVelocityX[count] * frameScale;
+            this.particleY[count] += this.particleVelocityY[count] * frameScale;
+            this.particleVelocityY[count] += 0.04D * frameScale;
+            this.particleLife[count]--;
+        }
+
+        if (!particlesAlive) {
+            this.destroyedAnimationDone = true;
         }
     }
 
