@@ -187,4 +187,8 @@ public class Enemy extends Sprite {
         this.bullets[currentBulletPos++ % maxBullets] = new Bullet((short) 45, x, y, this.panelWidth, this.panelHeight,
                 false, this.g2d);
     }
+
+    public long getMovementElapsed() {
+        return movementElapsed;
+    }
 }

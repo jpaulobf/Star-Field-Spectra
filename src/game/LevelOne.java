@@ -187,22 +187,9 @@ public class LevelOne {
         return groupStarts[group];
     }
 
-    private boolean hasActiveEnemies() {
-        return hasActiveEnemies(0, enemies.length);
-    }
-
     private boolean hasActiveEnemies(int start, int end) {
         for (int count = start; count < end; count++) {
             if (active[count]) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasAnyActiveEnemies() {
-        for (boolean value : active) {
-            if (value) {
                 return true;
             }
         }
@@ -284,5 +271,9 @@ public class LevelOne {
             g2d.setFont(new Font("Arial", Font.BOLD, 26));
             g2d.drawString("FASE 1-1 CONCLUIDA", panelWidth / 2 - 150, panelHeight / 2);
         }
+    }
+
+    public long getElapsed() {
+        return elapsed;
     }
 }
