@@ -220,7 +220,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     }
 
     public static void main(String[] args) throws Exception {
-        Thread thread1 = new Thread(new GameEngine(400), "engine");
+        Thread thread1 = new Thread(new GameEngine(60), "engine");
         thread1.start();
     }
 }
