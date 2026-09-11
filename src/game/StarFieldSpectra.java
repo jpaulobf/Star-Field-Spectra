@@ -32,7 +32,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
     private VolatileImage bufferImage           = null;
     private Spaceship spaceship                 = null;
     private Background background               = null;
-    private Enemy enemy                         = null;
+    private LevelOne levelOne                   = null;
     private TController tcontroller             = null;
     private Audio backgroundMusic               = null;
     private Star star                           = null;
@@ -83,7 +83,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         //objetos do jogo
         byte bulletspersecs = 4;
         this.spaceship      = new Spaceship((short)this.panel.getWidth(), (short)this.panel.getHeight(), this.g2d);
-        this.enemy          = new Enemy((short)this.panel.getWidth(), (short)this.panel.getHeight(), this.g2d, bulletspersecs);
+        this.levelOne       = new LevelOne((short)this.panel.getWidth(), (short)this.panel.getHeight(), this.g2d, bulletspersecs);
         this.star           = new Star(g2d, 100, 100, 5, 5, 0);
 
         //thread para o controle (quando presente)
@@ -110,6 +110,7 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
                     if (e.getKeyCode() == 40) spaceship.D = true;
                     if (e.getKeyCode() == 32) spaceship.S = true;
                     if (e.getKeyCode() == 66) spaceship.B = true;
+                    if (e.getKeyCode() == KeyEvent.VK_F1) resetGame();
                 }
             }
             /* Key released */
@@ -124,6 +125,17 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
                 }
             }
         });
+    }
+
+    private void resetGame() {
+        byte bulletspersecs = 4;
+        this.background = new Background(this.g2d);
+        this.spaceship = new Spaceship((short)this.panel.getWidth(), (short)this.panel.getHeight(), this.g2d);
+        this.levelOne = new LevelOne((short)this.panel.getWidth(), (short)this.panel.getHeight(), this.g2d, bulletspersecs);
+        this.star = new Star(this.g2d, 100, 100, 5, 5, 0);
+        this.fpsIndex = 0;
+        this.fpsCount = 0;
+        this.fpsTotalTime = 0;
     }
 
     /* 
@@ -149,16 +161,10 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         this.background.update(frametime);
 
         //Atualiza a spaceship
-        this.spaceship.update(frametime, this.enemy);
-
-        //Atualiza o inimigo
-        this.enemy.update(frametime, this.spaceship);
-
-        //Verifica a colisão entre a nave e o inimigo
-        if (Sprite.areColliding(this.spaceship, this.enemy)) {
-            this.enemy.hasCollided(true);
-            this.spaceship.hasCollided(true);
+        if (!this.spaceship.isGameOver()) {
+            this.levelOne.update(frametime, this.spaceship);
         }
+        this.spaceship.update(frametime, this.levelOne.getEnemies());
 
         this.star.update(frametime);
     }
@@ -180,8 +186,17 @@ public class StarFieldSpectra extends JFrame implements ControllerListener, Game
         //Desenha a spaceship
         this.spaceship.draw();
 
-        //Desenha um inimigo
-        this.enemy.draw();
+        //Desenha a fase e seus inimigos
+        this.levelOne.draw();
+
+        this.g2d.setColor(Color.WHITE);
+        this.g2d.setFont(new Font("Arial", Font.BOLD, 14));
+        this.g2d.drawString("VIDAS " + this.spaceship.getLives(), 20, 82);
+        if (this.spaceship.isGameOver()) {
+            this.g2d.setColor(Color.RED);
+            this.g2d.setFont(new Font("Arial", Font.BOLD, 32));
+            this.g2d.drawString("GAME OVER", windowWidth / 2 - 100, windowHeight / 2);
+        }
 
         //render the fps counter
         this.renderFPSLayer(frametime);
