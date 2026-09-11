@@ -20,6 +20,11 @@ public class Spaceship extends Sprite {
     private long lastShot               = 0;
     protected Bullet[] bullets          = new Bullet[maxBullets];
     private byte numberOfBombs          = 5;
+    private int lives                   = 3;
+    private boolean respawning          = false;
+    private boolean gameOver            = false;
+    private short startPositionX        = 10;
+    private short startPositionY        = 0;
     private short bombSpeed             = 0;
     private short defaultBombSpeed      = 12;
     private Arc2D bomb                  = null;
@@ -43,9 +48,10 @@ public class Spaceship extends Sprite {
 
         this.spriteWidth                = (short)spaceshipImg.getWidth();
         this.spriteHeight               = (short)spaceshipImg.getHeight();
-        this.positionX                  = 10;
+        this.positionX                  = this.startPositionX;
         this.defaultSpeed               = 3D;
         this.positionY                  = (short)((this.panelHeight / 2) - (this.spriteHeight / 2));
+        this.startPositionY             = (short)this.positionY;
         this.halfSpriteWidth            = (short)(this.spriteWidth / 2);
         this.halfSpriteHeight           = (short)(this.spriteHeight / 2);
         this.defaultDestructionAnimationStep = 2;
@@ -104,9 +110,21 @@ public class Spaceship extends Sprite {
     /* Atualiza a nave e seus adendos */
     public void update(long frametime, Sprite enemy) {
 
+        this.update(frametime, new Sprite[] { enemy });
+    }
+
+    public void update(long frametime, Sprite[] enemies) {
+
         this.speed = this.defaultSpeed * (double)(frametime / 16666666D);
 
-        if (!this.isDestroyed) {    
+        if (!this.isDestroyed) {
+            if (this.respawning) {
+                this.positionX += this.defaultSpeed * (double)(frametime / 16666666D);
+                if (this.positionX >= this.startPositionX) {
+                    this.positionX = this.startPositionX;
+                    this.respawning = false;
+                }
+            } else {
             if (!(this.L && this.R)) {
                 if (this.L) {
                     this.moveLeft();
@@ -141,11 +159,13 @@ public class Spaceship extends Sprite {
                 if (this.bomb.getWidth() >= panelWidth) {
                     this.bomb = null;
                 } else {
-                    if (Sprite.areCollidingBomb(this.bomb, enemy)) {
-                        System.out.println("colidiu...");
-                        enemy.hasCollided(false);
+                    for (Sprite enemy : enemies) {
+                        if (Sprite.areCollidingBomb(this.bomb, enemy)) {
+                            enemy.hasCollided(false);
+                        }
                     }
                 }
+            }
             }
         } else {
             if (this.isToAnimateDestruction && !this.destroyedAnimationDone) {
@@ -155,19 +175,33 @@ public class Spaceship extends Sprite {
                 if (this.destroyAnimationWidth >= this.spriteWidth) {
                     this.destroyedAnimationDone = true;
                 }
+            } else if (!this.gameOver && this.lives > 0) {
+                this.positionX = (short)(-this.spriteWidth);
+                this.positionY = this.startPositionY;
+                this.destroyedAnimationDone = false;
+                this.isToAnimateDestruction = false;
+                this.isDestroyed = false;
+                this.respawning = true;
+                this.destroyAnimationWidth = 0;
+                this.destroyAnimationHeight = 0;
             }
         }
             
         for (int count = 0; count < this.bullets.length; count++) {
             var bullet = this.bullets[count];
             if (bullet != null) {
-                bullet.update(frametime, enemy);
+                bullet.update(frametime, null);
                 if (bullet.bulletDestroyed()) {
                     bullet = null;
                     this.bullets[count] = null;
                 } else {
-                    if (Sprite.areColliding(bullet, enemy)) {
-                        enemy.hasCollided(false);
+                    for (Sprite enemy : enemies) {
+                        if (Sprite.areColliding(bullet, enemy)) {
+                            enemy.hasCollided(false);
+                            bullet.hasCollided(false);
+                            this.bullets[count] = null;
+                            break;
+                        }
                     }
                 }
             }
@@ -237,4 +271,22 @@ public class Spaceship extends Sprite {
     
     /* Getters */
     public Arc2D getBomb() {return (this.bomb);}
+
+    @Override
+    public void hasCollided(boolean keepPosition) {
+        if (this.isDestroyed || this.gameOver) {
+            return;
+        }
+        this.lives--;
+        super.hasCollided(true);
+        if (this.lives <= 0) {
+            this.gameOver = true;
+        }
+    }
+
+    public int getLives() {return this.lives;}
+
+    public boolean isRespawning() {return this.respawning;}
+
+    public boolean isGameOver() {return this.gameOver;}
 }
