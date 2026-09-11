@@ -10,9 +10,13 @@ public class Enemy extends Sprite {
     private final byte maxBullets = 20;
     private short currentBulletPos = 0;
     private long shotElapsed = 0;
+    private long initialShotDelay = 0;
     private long movementElapsed = 0;
+    private double parabolicPhase = 0;
     private short baseY = 0;
     private boolean parabolicMovement = false;
+    private int diagonalDirection = 0;
+    private int verticalDirection = 1;
     protected Bullet[] bullets = new Bullet[maxBullets];
 
     /* Construtor */
@@ -39,10 +43,22 @@ public class Enemy extends Sprite {
     }
 
     public void reset(short positionX, short positionY, boolean parabolicMovement, double movementSpeed) {
+        this.reset(positionX, positionY, parabolicMovement, 0, movementSpeed);
+    }
+
+    public void reset(short positionX, short positionY, boolean parabolicMovement,
+                      int diagonalDirection, double movementSpeed) {
+        this.reset(positionX, positionY, parabolicMovement, diagonalDirection, movementSpeed, 0);
+    }
+
+    public void reset(short positionX, short positionY, boolean parabolicMovement,
+                      int diagonalDirection, double movementSpeed, long initialShotDelay) {
         this.positionX = positionX;
         this.positionY = positionY;
         this.baseY = positionY;
         this.parabolicMovement = parabolicMovement;
+        this.diagonalDirection = diagonalDirection;
+        this.verticalDirection = 1;
         this.defaultSpeed = movementSpeed;
         this.isDestroyed = false;
         this.isToAnimateDestruction = false;
@@ -50,7 +66,9 @@ public class Enemy extends Sprite {
         this.destroyAnimationWidth = 0;
         this.destroyAnimationHeight = 0;
         this.shotElapsed = 0;
+        this.initialShotDelay = initialShotDelay;
         this.movementElapsed = 0;
+        this.parabolicPhase = 0;
         this.currentBulletPos = 0;
         for (int count = 0; count < this.bullets.length; count++) {
             this.bullets[count] = null;
@@ -80,26 +98,7 @@ public class Enemy extends Sprite {
 
     /* Animação da destruição do Sprite */
     protected void drawDestroyAnimation() {
-        this.g2d.setColor(Color.red);
-        short offsetY = 8;
-
-        this.g2d.drawOval((int) this.destroyAnimationX + this.halfSpriteWidth,
-                (int) this.destroyAnimationY + this.halfSpriteHeight + offsetY,
-                (int) this.destroyAnimationWidth,
-                (int) this.destroyAnimationHeight);
-
-        this.g2d.drawOval((int) this.destroyAnimationX + this.halfSpriteWidth + 8,
-                (int) this.destroyAnimationY + this.halfSpriteHeight + offsetY + 8,
-                (int) this.destroyAnimationWidth - 16,
-                (int) this.destroyAnimationHeight - 16);
-
-        this.g2d.drawOval((int) this.destroyAnimationX + this.halfSpriteWidth + 16,
-                (int) this.destroyAnimationY + this.halfSpriteHeight + offsetY + 16,
-                (int) this.destroyAnimationWidth - 32,
-                (int) this.destroyAnimationHeight - 32);
-
-        this.destroyAnimationX -= destructionAnimationStep / 2;
-        this.destroyAnimationY -= destructionAnimationStep / 2;
+        this.drawDestructionParticles();
     }
 
     /* Atualiza a nave e seus adendos */
@@ -109,9 +108,10 @@ public class Enemy extends Sprite {
 
         if (!this.isDestroyed) {
             this.shotElapsed += frametime;
-            if (this.shotElapsed >= 1_200_000_000L) {
+            if (this.shotElapsed >= 1_200_000_000L + this.initialShotDelay) {
                 this.shoot(frametime);
                 this.shotElapsed = 0;
+                this.initialShotDelay = 0;
             }
             this.advance(frametime);
         } else {
@@ -158,12 +158,25 @@ public class Enemy extends Sprite {
         double frameScale = frametime / 16_666_666D;
         this.positionX -= this.defaultSpeed * frameScale;
 
+        if (this.diagonalDirection != 0) {
+            this.positionY += this.defaultSpeed * this.diagonalDirection * 0.45D * frameScale;
+        }
+
         if (this.parabolicMovement) {
             this.movementElapsed += frametime;
-            double phase = this.movementElapsed / 1_000_000_000D * 2.4D;
-            double arc = Math.sin(phase) * 70D;
+            this.parabolicPhase += frametime / 1_000_000_000D * 2.4D * this.verticalDirection;
+            double arc = Math.sin(this.parabolicPhase) * 70D;
             double nextY = this.baseY + arc;
             this.positionY = Math.max(0, Math.min(this.panelHeight - this.spriteHeight - 1, nextY));
+        }
+    }
+
+    public void reverseVerticalDirection() {
+        if (this.diagonalDirection != 0) {
+            this.diagonalDirection *= -1;
+        }
+        if (this.parabolicMovement) {
+            this.verticalDirection *= -1;
         }
     }
 
