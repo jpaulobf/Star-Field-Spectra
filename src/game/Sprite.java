@@ -49,9 +49,14 @@ public abstract class Sprite {
 
     /* Set the collision */
     public void hasCollided(boolean keepPosition) {
+        if (this.isDestroyed) {
+            return;
+        }
         this.isDestroyed            = true;
         this.destroyAnimationX      = this.positionX;
         this.destroyAnimationY      = this.positionY;
+        this.destroyAnimationWidth  = Math.max(4, this.spriteWidth / 4);
+        this.destroyAnimationHeight = Math.max(4, this.spriteHeight / 4);
         this.isToAnimateDestruction = true;
         if (!keepPosition) {
             this.positionX              = -2000;
