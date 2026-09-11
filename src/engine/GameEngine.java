@@ -16,6 +16,7 @@ public class GameEngine implements Runnable {
     private long FPS30                  = (long)(1_000_000_000 / 30);
     private long TARGET_FRAMETIME       = FPS60;
     private boolean UNLIMITED_FPS       = false;
+    private final int MAX_UPDATES_PER_FRAME = 5;
     private Game game                   = null;
     
     /*
@@ -54,70 +55,44 @@ public class GameEngine implements Runnable {
     
     /* Método de execução da thread */
     public void run() {
-        long lastTime           = System.nanoTime(); // Usado para calcular o delta time no modo de FPS ilimitado
-        long now                = 0;
-        long elapsed            = 0;
-        long wait               = 0;
-        long overSleep          = 0;
+        long previousTime = System.nanoTime();
+        long accumulator = 0;
 
-        if (UNLIMITED_FPS) {
-            while (isEngineRunning) {
-                now = System.nanoTime();
-                elapsed = now - lastTime;
-                lastTime = now;
+        while (isEngineRunning && !Thread.currentThread().isInterrupted()) {
+            long frameStart = System.nanoTime();
+            long elapsed = frameStart - previousTime;
+            previousTime = frameStart;
 
-                // Cap delta time to avoid huge jumps (e.g. 0.1s)
-                if (elapsed > 100_000_000) elapsed = 100_000_000;
-
+            if (UNLIMITED_FPS) {
+                elapsed = Math.min(elapsed, 100_000_000L);
                 this.update(elapsed);
                 this.draw(elapsed);
-                
-                // Yield to prevent CPU starvation
                 Thread.yield();
+                continue;
             }
-        } else {
-            while (isEngineRunning) {
-                now = System.nanoTime();
-                elapsed = now - lastTime;
-                lastTime = now;
 
-                this.update(elapsed);
-                this.draw(elapsed);
+            accumulator += Math.min(elapsed, 250_000_000L);
+            int updates = 0;
+            while (accumulator >= TARGET_FRAMETIME && updates < MAX_UPDATES_PER_FRAME) {
+                this.update(TARGET_FRAMETIME);
+                accumulator -= TARGET_FRAMETIME;
+                updates++;
+            }
 
-                // Calculate time taken
-                long workTime = System.nanoTime() - now;
+            // Descarta atraso excessivo para evitar o efeito de "espiral da morte".
+            if (updates == MAX_UPDATES_PER_FRAME && accumulator >= TARGET_FRAMETIME) {
+                accumulator = 0;
+            }
 
-                // Calculate wait time, compensating for previous over-sleep/lag
-                wait = TARGET_FRAMETIME - workTime - overSleep;
-
-                if (wait > 0) {
-                    try {
-                        // Hybrid Sleep Strategy:
-                        // Sleep for (wait - 2ms) to save CPU, then spin-wait for precision
-                        long sleepMs = (wait / 1_000_000) - 2;
-                        if (sleepMs > 0) {
-                            Thread.sleep(sleepMs);
-                        }
-                        
-                        // Busy-wait for the remaining nanoseconds
-                        while (System.nanoTime() < now + TARGET_FRAMETIME - overSleep) {
-                            // Cede o tempo de CPU para outras threads enquanto espera, para evitar 100% de uso.
-                            Thread.yield();
-                        }
-                        overSleep = 0;
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                } else {
-                    // We are behind schedule
-                    overSleep = -wait;
-                    
-                    // Frame Skipping: Se estamos atrasados por mais de um quadro completo,
-                    // precisamos recuperar o tempo executando a lógica do jogo sem renderizar.
-                    while (overSleep >= TARGET_FRAMETIME) {
-                        this.update(TARGET_FRAMETIME); // Executa um passo da simulação para recuperar o tempo
-                        overSleep -= TARGET_FRAMETIME; // "Paga" a dívida de tempo de um quadro
-                    }
+            this.draw(TARGET_FRAMETIME);
+            long remaining = TARGET_FRAMETIME - (System.nanoTime() - frameStart);
+            if (remaining > 0) {
+                try {
+                    long sleepMillis = remaining / 1_000_000L;
+                    int sleepNanos = (int)(remaining % 1_000_000L);
+                    Thread.sleep(sleepMillis, sleepNanos);
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
                 }
             }
         }
