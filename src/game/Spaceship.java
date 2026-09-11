@@ -86,25 +86,7 @@ public class Spaceship extends Sprite {
 
     /* Animação da destruição do Sprite */
     protected void drawDestroyAnimation() {
-        this.g2d.setColor(Color.red);
-
-        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth, 
-                          (int)this.destroyAnimationY + this.halfSpriteHeight, 
-                          (int)this.destroyAnimationWidth, 
-                          (int)this.destroyAnimationHeight);
-
-        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth + 8, 
-                          (int)this.destroyAnimationY + this.halfSpriteHeight + 8, 
-                          (int)this.destroyAnimationWidth - 16, 
-                          (int)this.destroyAnimationHeight - 16);
-
-        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth + 16, 
-                          (int)this.destroyAnimationY + this.halfSpriteHeight + 16, 
-                          (int)this.destroyAnimationWidth - 32, 
-                          (int)this.destroyAnimationHeight - 32);
-
-        this.destroyAnimationX -= destructionAnimationStep / 2;
-        this.destroyAnimationY -= destructionAnimationStep / 2;
+        this.drawDestructionParticles();
     }
 
     /* Atualiza a nave e seus adendos */
