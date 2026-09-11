@@ -104,12 +104,6 @@ public class Bullet extends Sprite {
 
     /* desenha a animação de destruição */
     protected void drawDestroyAnimation() {
-        this.g2d.setColor(Color.red);
-        this.g2d.drawOval((int)this.destroyAnimationX + this.halfSpriteWidth, 
-                          (int)this.destroyAnimationY + this.halfSpriteHeight, 
-                          (int)this.destroyAnimationWidth, 
-                          (int)this.destroyAnimationHeight);
-        this.destroyAnimationX -= destructionAnimationStep / 2;
-        this.destroyAnimationY -= destructionAnimationStep / 2;
+        this.drawDestructionParticles();
     }
 }
