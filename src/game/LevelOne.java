@@ -7,14 +7,14 @@ import java.awt.Graphics2D;
 /** Orquestra a primeira fase: entrada gradual, formação e encerramento. */
 public class LevelOne {
 
-    private static final int ENEMY_COUNT = 15;
-    private static final long[] SPAWN_TIMES = {
-        1_000_000_000L, 3_500_000_000L, 6_000_000_000L,
-        8_000_000_000L, 8_180_000_000L, 8_360_000_000L,
-        11_000_000_000L, 11_180_000_000L, 11_360_000_000L, 11_540_000_000L,
-        14_000_000_000L, 14_180_000_000L, 14_360_000_000L, 14_540_000_000L,
-        14_720_000_000L
-    };
+    private static final int ENEMY_COUNT = 50;
+    private static final int DIAGONAL_ENEMY_COUNT = 18;
+    private static final int PARABOLIC_START = 18;
+    private static final int STRAIGHT_START = 33;
+    private static final long PHASE_START_DELAY = 1_000_000_000L;
+    private static final long DIAGONAL_GROUP_INTERVAL = 2_200_000_000L;
+    private static final long FORMATION_INTERVAL = 180_000_000L;
+    private static final long STRAIGHT_INTERVAL = 650_000_000L;
 
     private final Enemy[] enemies = new Enemy[ENEMY_COUNT];
     private final boolean[] active = new boolean[ENEMY_COUNT];
@@ -22,7 +22,9 @@ public class LevelOne {
     private final short panelWidth;
     private final short panelHeight;
     private long elapsed;
+    private long phaseElapsed;
     private int nextSpawn;
+    private int phase;
     private int score;
     private boolean complete;
 
@@ -42,10 +44,8 @@ public class LevelOne {
         }
 
         elapsed += frametime;
-        while (nextSpawn < SPAWN_TIMES.length && elapsed >= SPAWN_TIMES[nextSpawn]) {
-            spawn(nextSpawn);
-            nextSpawn++;
-        }
+        phaseElapsed += frametime;
+        spawnCurrentPhase();
 
         for (int count = 0; count < enemies.length; count++) {
             if (!active[count]) {
@@ -59,7 +59,10 @@ public class LevelOne {
                 enemy.hasCollided(false);
                 spaceship.hasCollided(true);
             }
-            if (!enemy.isDestroyed && enemy.getPositionX() + enemy.getWidth() < 0) {
+            boolean outsideScreen = enemy.getPositionX() + enemy.getWidth() < 0
+                    || enemy.getPositionY() > panelHeight
+                    || enemy.getPositionY() + enemy.getHeight() < 0;
+            if (!enemy.isDestroyed && outsideScreen) {
                 active[count] = false;
             }
             if (enemy.isDestroyed && enemy.isDestroyedAnimationDone()) {
@@ -70,25 +73,134 @@ public class LevelOne {
 
         separateEnemies();
 
-        if (nextSpawn == SPAWN_TIMES.length && !hasActiveEnemies()
-                && elapsed > SPAWN_TIMES[SPAWN_TIMES.length - 1] + 2_000_000_000L) {
-            complete = true;
+        advancePhaseWhenCleared();
+    }
+
+    private void spawnCurrentPhase() {
+        long startDelay = phase == 0 || phase == 1 ? PHASE_START_DELAY : 0;
+        long interval = phase == 0 ? DIAGONAL_GROUP_INTERVAL
+            : phase == 2 ? STRAIGHT_INTERVAL : FORMATION_INTERVAL;
+        int phaseStart = phase == 0 ? 0 : phase == 1 ? PARABOLIC_START : STRAIGHT_START;
+        int phaseEnd = phase == 0 ? DIAGONAL_ENEMY_COUNT
+            : phase == 1 ? STRAIGHT_START : ENEMY_COUNT;
+
+        while (nextSpawn < phaseEnd && phaseElapsed >= startDelay
+                + getSpawnOffset(nextSpawn, phaseStart, interval)) {
+                int parabolicOffset = nextSpawn - PARABOLIC_START;
+                if (phase == 1 && parabolicOffset > 0
+                    && parabolicOffset % 5 == 0
+                    && !isParabolicTrainReady(nextSpawn - 5)) {
+                break;
+            }
+            spawn(nextSpawn);
+            nextSpawn++;
         }
     }
 
+    private boolean isParabolicTrainReady(int firstEnemyIndex) {
+        if (!active[firstEnemyIndex]) {
+            return true;
+        }
+        Enemy firstEnemy = enemies[firstEnemyIndex];
+        return firstEnemy.isDestroyed || firstEnemy.getPositionX() <= panelWidth / 2;
+    }
+
+    private long getSpawnOffset(int index, int phaseStart, long interval) {
+        if (phase == 0) {
+            return getDiagonalGroup(index) * interval;
+        }
+        return (index - phaseStart) * interval;
+    }
+
+    private void advancePhaseWhenCleared() {
+        int phaseEnd = phase == 0 ? DIAGONAL_ENEMY_COUNT
+            : phase == 1 ? STRAIGHT_START : ENEMY_COUNT;
+        int phaseStart = phase == 0 ? 0
+            : phase == 1 ? PARABOLIC_START : STRAIGHT_START;
+        if (nextSpawn < phaseEnd || (phase > 0 && hasActiveEnemies(phaseStart, phaseEnd))) {
+            return;
+        }
+
+        if (phase == 2) {
+            complete = true;
+            return;
+        }
+
+        phase++;
+        phaseElapsed = 0;
+        nextSpawn = phase == 1 ? PARABOLIC_START : STRAIGHT_START;
+    }
+
     private void spawn(int index) {
-        boolean parabolic = index >= 3;
-        int groupStart = index < 3 ? index : index < 6 ? 3 : index < 10 ? 6 : 10;
-        int memberIndex = index - groupStart;
-        short x = (short)(panelWidth + 60 + (parabolic ? memberIndex * 45 : 0));
-        short y = (short)(parabolic ? groupStart == 3 ? 150 : groupStart == 6 ? 250 : 180
-            : 70 + index * 140);
-        double speed = parabolic ? 1.65D + memberIndex * 0.12D : 1.35D + index * 0.65D;
-        enemies[index].reset(x, y, parabolic, speed);
+        short x;
+        short y;
+        int diagonalDirection;
+        boolean parabolic;
+        double speed;
+
+        if (index < DIAGONAL_ENEMY_COUNT) {
+            int groupIndex = getDiagonalGroup(index);
+            int memberIndex = index - getDiagonalGroupStart(groupIndex);
+            boolean enteringFromTop = groupIndex % 2 != 0;
+            x = (short)(panelWidth - 80 - memberIndex * 110);
+                y = enteringFromTop ? (short)-20 : panelHeight;
+            diagonalDirection = enteringFromTop ? 1 : -1;
+            parabolic = false;
+            speed = 1.8D;
+            long shotDelay = memberIndex * 20L * 16_666_666L;
+            enemies[index].reset(x, y, parabolic, diagonalDirection, speed, shotDelay);
+        } else if (index < STRAIGHT_START) {
+            int groupIndex = (index - PARABOLIC_START) / 5;
+            int memberIndex = (index - PARABOLIC_START) % 5;
+            x = (short)(panelWidth + 60 + memberIndex * 45);
+            y = (short)(130 + groupIndex * 90);
+            diagonalDirection = 0;
+            parabolic = true;
+            speed = 1.65D + (memberIndex % 3) * 0.12D;
+            long shotDelay = memberIndex * 20L * 16_666_666L;
+            enemies[index].reset(x, y, parabolic, diagonalDirection, speed, shotDelay);
+        } else {
+            int memberIndex = index - STRAIGHT_START;
+            x = (short)(panelWidth + 60);
+            y = (short)(40 + (memberIndex % 7) * 65);
+            diagonalDirection = 0;
+            parabolic = false;
+            speed = 3.2D + (memberIndex % 4) * 0.35D;
+            enemies[index].reset(x, y, parabolic, diagonalDirection, speed, 0);
+        }
         active[index] = true;
     }
 
+    private int getDiagonalGroup(int index) {
+        int[] groupStarts = { 0, 3, 6, 9, 12, 15 };
+        int[] groupSizes = { 3, 3, 3, 3, 3, 3 };
+        for (int group = 0; group < groupStarts.length; group++) {
+            if (index < groupStarts[group] + groupSizes[group]) {
+                return group;
+            }
+        }
+        return groupStarts.length - 1;
+    }
+
+    private int getDiagonalGroupStart(int group) {
+        int[] groupStarts = { 0, 3, 6, 9, 12, 15 };
+        return groupStarts[group];
+    }
+
     private boolean hasActiveEnemies() {
+        return hasActiveEnemies(0, enemies.length);
+    }
+
+    private boolean hasActiveEnemies(int start, int end) {
+        for (int count = start; count < end; count++) {
+            if (active[count]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasAnyActiveEnemies() {
         for (boolean value : active) {
             if (value) {
                 return true;
@@ -140,6 +252,8 @@ public class LevelOne {
                     firstEnemy.positionY += direction * (overlapY / 2D + 1D);
                     secondEnemy.positionY -= direction * (overlapY / 2D + 1D);
                 }
+                firstEnemy.reverseVerticalDirection();
+                secondEnemy.reverseVerticalDirection();
             }
         }
     }
@@ -162,7 +276,7 @@ public class LevelOne {
         g2d.setColor(new Color(255, 255, 255, 90));
         g2d.drawRect(20, 58, 180, 6);
         g2d.setColor(new Color(90, 220, 255));
-        int progress = (int)(180 * Math.min(1D, (double)nextSpawn / SPAWN_TIMES.length));
+        int progress = (int)(180 * Math.min(1D, (double)nextSpawn / ENEMY_COUNT));
         g2d.fillRect(20, 58, progress, 6);
 
         if (complete) {
