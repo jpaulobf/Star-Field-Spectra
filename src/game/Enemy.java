@@ -9,10 +9,11 @@ public class Enemy extends Sprite {
     /* Membros */
     private final byte maxBullets = 20;
     private short currentBulletPos = 0;
-    private short calcBulletsPS = 0;
-    private long frameCount = 0;
+    private long shotElapsed = 0;
+    private long movementElapsed = 0;
+    private short baseY = 0;
+    private boolean parabolicMovement = false;
     protected Bullet[] bullets = new Bullet[maxBullets];
-    private byte direction = 0; // 0 - up | 1 - down
 
     /* Construtor */
     public Enemy(short panelWidth, short panelHeight, Graphics2D g2d, short bulletsPerSeconds) {
@@ -23,11 +24,41 @@ public class Enemy extends Sprite {
         this.positionY = 100;
         this.speed = 2;
         this.defaultSpeed = 2D;
-        this.calcBulletsPS = (short) (60 / bulletsPerSeconds);
         this.halfSpriteWidth = (short) (this.spriteWidth / 2);
         this.halfSpriteHeight = (short) (this.spriteHeight / 2);
         this.defaultDestructionAnimationStep = 2;
         this.destructionAnimationStep = this.defaultDestructionAnimationStep;
+    }
+
+    public void reset(short positionX, short positionY) {
+        this.reset(positionX, positionY, false, 2D);
+    }
+
+    public void reset(short positionX, short positionY, boolean parabolicMovement) {
+        this.reset(positionX, positionY, parabolicMovement, 2D);
+    }
+
+    public void reset(short positionX, short positionY, boolean parabolicMovement, double movementSpeed) {
+        this.positionX = positionX;
+        this.positionY = positionY;
+        this.baseY = positionY;
+        this.parabolicMovement = parabolicMovement;
+        this.defaultSpeed = movementSpeed;
+        this.isDestroyed = false;
+        this.isToAnimateDestruction = false;
+        this.destroyedAnimationDone = false;
+        this.destroyAnimationWidth = 0;
+        this.destroyAnimationHeight = 0;
+        this.shotElapsed = 0;
+        this.movementElapsed = 0;
+        this.currentBulletPos = 0;
+        for (int count = 0; count < this.bullets.length; count++) {
+            this.bullets[count] = null;
+        }
+    }
+
+    public boolean hasParabolicMovement() {
+        return this.parabolicMovement;
     }
 
     /* Desenha a nave e seus adendos */
@@ -77,27 +108,12 @@ public class Enemy extends Sprite {
         this.speed = this.defaultSpeed * (double) (frametime / 16666666D);
 
         if (!this.isDestroyed) {
-            // Atira a cada X quadros
-            if (this.frameCount > (this.calcBulletsPS / (double)(frametime / 16666666D))) {
+            this.shotElapsed += frametime;
+            if (this.shotElapsed >= 1_200_000_000L) {
                 this.shoot(frametime);
-                this.frameCount = 0;
+                this.shotElapsed = 0;
             }
-            // Move para cima e para baixo
-            if (this.frameCount % 2 == 0) {
-                if (this.direction == 0) {
-                    if (this.positionY <= 0) {
-                        this.direction = 1;
-                    } else {
-                        this.moveUp();
-                    }
-                } else {
-                    if (this.positionY >= this.panelHeight - spriteHeight - 1) {
-                        this.direction = 0;
-                    } else {
-                        this.moveDown();
-                    }
-                }
-            }
+            this.advance(frametime);
         } else {
             if (this.isToAnimateDestruction && !this.destroyedAnimationDone) {
                 this.destructionAnimationStep = this.defaultDestructionAnimationStep * ((double) frametime / 16_666_666D);
@@ -125,8 +141,10 @@ public class Enemy extends Sprite {
                         this.bullets[count] = null;
                     }
                 } else {
-                    if (Sprite.areColliding(bullet, spaceship)) {
+                        if (!((Spaceship) spaceship).isRespawning()
+                            && Sprite.areColliding(bullet, spaceship)) {
                         spaceship.hasCollided(true);
+                        bullet.hasCollided(false);
                     }
                     if (Sprite.areCollidingBomb(((Spaceship) spaceship).getBomb(), bullet)) {
                         bullet.hasCollided(false);
@@ -134,25 +152,19 @@ public class Enemy extends Sprite {
                 }
             }
         }
-        this.frameCount++;
     }
 
-    /* Move a nave para baixo */
-    private void moveDown() {
-        double next = (double) (this.positionY + this.speed);
-        if (next > this.panelHeight - spriteHeight - 1) {
-            next = (double) (this.panelHeight - spriteHeight - 1);
-        }
-        this.positionY = (short) Math.ceil(next);
-    }
+    private void advance(long frametime) {
+        double frameScale = frametime / 16_666_666D;
+        this.positionX -= this.defaultSpeed * frameScale;
 
-    /* Move a nave para cima */
-    private void moveUp() {
-        double next = (double) (this.positionY - this.speed);
-        if (next < 0) {
-            next = 0;
+        if (this.parabolicMovement) {
+            this.movementElapsed += frametime;
+            double phase = this.movementElapsed / 1_000_000_000D * 2.4D;
+            double arc = Math.sin(phase) * 70D;
+            double nextY = this.baseY + arc;
+            this.positionY = Math.max(0, Math.min(this.panelHeight - this.spriteHeight - 1, nextY));
         }
-        this.positionY = (short) Math.floor(next);
     }
 
     /* Atira com a nave */
